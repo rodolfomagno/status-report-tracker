@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Plus, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 
 const StatusTracker = () => {
@@ -14,7 +13,8 @@ const StatusTracker = () => {
     status: '',
     nextSteps: '',
     issues: '',
-    feedback: ''
+    projectStatus: 'Em Andamento',
+    feedbacks: []
   });
 
   const handleSubmit = (e) => {
@@ -22,7 +22,8 @@ const StatusTracker = () => {
     const newReport = {
       id: Date.now(),
       ...formData,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      feedbacks: []
     };
     setReports([newReport, ...reports]);
     setFormData({
@@ -32,7 +33,8 @@ const StatusTracker = () => {
       status: '',
       nextSteps: '',
       issues: '',
-      feedback: ''
+      projectStatus: 'Em Andamento',
+      feedbacks: []
     });
     setShowForm(false);
   };
@@ -44,12 +46,27 @@ const StatusTracker = () => {
     });
   };
 
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'Em Andamento':
+        return 'bg-blue-100 text-blue-800';
+      case 'Aguardando Feedback':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'Bloqueado':
+        return 'bg-red-100 text-red-800';
+      case 'Concluído':
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-4">
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex justify-between items-center">
-            <span>Acompanhamento de Relatórios de Status</span>
+      <div className="mb-6 border rounded-lg shadow-sm">
+        <div className="p-4 border-b">
+          <div className="flex justify-between items-center">
+            <span className="text-xl font-bold">Acompanhamento de Relatórios de Status</span>
             <button
               onClick={() => setShowForm(!showForm)}
               className="bg-blue-500 text-white px-4 py-2 rounded-md flex items-center gap-2"
@@ -57,9 +74,9 @@ const StatusTracker = () => {
               <Plus size={16} />
               Novo Relatório
             </button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+          </div>
+        </div>
+        <div className="p-4">
           {showForm && (
             <form onSubmit={handleSubmit} className="space-y-4 mb-6">
               <div className="grid grid-cols-2 gap-4">
@@ -86,6 +103,10 @@ const StatusTracker = () => {
                     <option value="">Selecione a Localização</option>
                     <option value="São Paulo">São Paulo</option>
                     <option value="Rio de Janeiro">Rio de Janeiro</option>
+                    <option value="Espírito Santo">Espírito Santo</option>
+                    <option value="Paraíba">Paraíba</option>
+                    <option value="Brasília">Brasília</option>
+                    <option value="Pará">Pará</option>
                   </select>
                 </div>
               </div>
@@ -99,6 +120,21 @@ const StatusTracker = () => {
                   className="w-full p-2 border rounded"
                   required
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Status do Projeto</label>
+                <select
+                  name="projectStatus"
+                  value={formData.projectStatus}
+                  onChange={handleChange}
+                  className="w-full p-2 border rounded"
+                  required
+                >
+                  <option value="Em Andamento">Em Andamento</option>
+                  <option value="Aguardando Feedback">Aguardando Feedback</option>
+                  <option value="Bloqueado">Bloqueado</option>
+                  <option value="Concluído">Concluído</option>
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Atualização de Status</label>
@@ -148,7 +184,7 @@ const StatusTracker = () => {
 
           <div className="space-y-4">
             {reports.map((report) => (
-              <Card key={report.id} className="border rounded-lg">
+              <div key={report.id} className="border rounded-lg">
                 <div
                   className="p-4 cursor-pointer"
                   onClick={() => setExpandedReport(expandedReport === report.id ? null : report.id)}
@@ -161,6 +197,10 @@ const StatusTracker = () => {
                       <span className="font-medium">{report.location}</span>
                       <span className="text-gray-500">|</span>
                       <span>{report.department}</span>
+                      <span className="text-gray-500">|</span>
+                      <span className={`text-sm px-2 py-1 rounded ${getStatusColor(report.projectStatus)}`}>
+                        {report.projectStatus}
+                      </span>
                     </div>
                     {expandedReport === report.id ? (
                       <ChevronUp size={16} />
@@ -189,38 +229,75 @@ const StatusTracker = () => {
                         </div>
                       )}
                       <div className="mt-4 border-t pt-4">
-                        <h4 className="font-medium">Feedback da Gestão</h4>
-                        {report.feedback ? (
-                          <div className="bg-gray-50 p-3 rounded-md mt-2">
-                            <p className="text-gray-600 whitespace-pre-line">{report.feedback}</p>
-                          </div>
-                        ) : (
-                          <form onSubmit={(e) => {
-                            e.preventDefault();
-                            const feedbackText = e.target.feedback.value;
-                            if (feedbackText.trim()) {
-                              const updatedReports = reports.map(r => 
-                                r.id === report.id 
-                                  ? { ...r, feedback: feedbackText }
-                                  : r
-                              );
-                              setReports(updatedReports);
-                              e.target.reset();
-                            }
-                          }} className="mt-2">
-                            <textarea
-                              name="feedback"
-                              placeholder="Adicione seu feedback aqui..."
-                              className="w-full p-2 border rounded h-20"
-                            />
+                        <h4 className="font-medium">Histórico de Feedback</h4>
+                        <div className="space-y-3 mt-2">
+                          {report.feedbacks && report.feedbacks.map((feedback, index) => (
+                            <div key={index} className="bg-gray-50 p-3 rounded-md">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <p className="text-gray-600 whitespace-pre-line">{feedback.comment}</p>
+                                  <p className="text-xs text-gray-400 mt-1">
+                                    {new Date(feedback.date).toLocaleString('pt-BR')}
+                                  </p>
+                                </div>
+                                <span className={`text-sm px-2 py-1 rounded ${
+                                  feedback.status === 'Resolvido' ? 'bg-green-100 text-green-800' :
+                                  feedback.status === 'Em Análise' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-red-100 text-red-800'
+                                }`}>
+                                  {feedback.status}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <form onSubmit={(e) => {
+                          e.preventDefault();
+                          const feedbackText = e.target.feedback.value;
+                          const feedbackStatus = e.target.feedbackStatus.value;
+                          if (feedbackText.trim()) {
+                            const updatedReports = reports.map(r => 
+                              r.id === report.id 
+                                ? {
+                                    ...r,
+                                    feedbacks: [
+                                      ...(r.feedbacks || []),
+                                      {
+                                        comment: feedbackText,
+                                        status: feedbackStatus,
+                                        date: new Date().toISOString()
+                                      }
+                                    ]
+                                  }
+                                : r
+                            );
+                            setReports(updatedReports);
+                            e.target.reset();
+                          }
+                        }} className="mt-3">
+                          <textarea
+                            name="feedback"
+                            placeholder="Adicione seu feedback aqui..."
+                            className="w-full p-2 border rounded h-20"
+                          />
+                          <div className="flex justify-between items-center mt-2">
+                            <select
+                              name="feedbackStatus"
+                              className="p-2 border rounded"
+                              defaultValue="Em Análise"
+                            >
+                              <option value="Em Análise">Em Análise</option>
+                              <option value="Requer Ação">Requer Ação</option>
+                              <option value="Resolvido">Resolvido</option>
+                            </select>
                             <button
                               type="submit"
-                              className="mt-2 bg-green-500 text-white px-4 py-2 rounded"
+                              className="bg-green-500 text-white px-4 py-2 rounded"
                             >
                               Adicionar Feedback
                             </button>
-                          </form>
-                        )}
+                          </div>
+                        </form>
                       </div>
                       <div className="text-xs text-gray-400 mt-4">
                         Última atualização: {new Date(report.timestamp).toLocaleString('pt-BR')}
@@ -228,11 +305,11 @@ const StatusTracker = () => {
                     </div>
                   </div>
                 )}
-              </Card>
+              </div>
             ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };
